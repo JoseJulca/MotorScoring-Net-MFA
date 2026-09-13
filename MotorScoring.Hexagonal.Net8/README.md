@@ -74,6 +74,53 @@ El **Domain** contiene las reglas del scoring y no depende de ASP.NET Core, Enti
 
 `MotorScoring.Api` actúa como **Composition Root**, donde se conectan los casos de uso con los adaptadores concretos mediante inyección de dependencias.
 
+## Autenticación y autorización
+
+El Api **no implementa login ni gestiona usuarios**: solo valida el JWT
+emitido por `MotorScoring.Identity` (servicio externo, puerto `8082`) y
+autoriza según los permisos que ese token trae como claims.
+
+```text
+Authorization: Bearer <JWT>
+ ↓
+JwtBearer valida firma, issuer, audience y expiración
+ ↓
+Policy por endpoint (RequireClaim "permission", "<permiso>")
+ ↓
+Permitido / 403
+```
+
+Un `401 Unauthorized` indica un token ausente, inválido o expirado. Un
+`403 Forbidden` indica un token válido sin el permiso requerido para
+esa operación.
+
+Cada endpoint funcional exige un permiso específico mediante política
+de autorización:
+
+| Endpoint | Policy exigida |
+|---|---|
+| `POST /api/v1/solicitudes-credito` | `Scoring.Solicitud.Crear` |
+| `POST /api/v1/solicitudes-credito/{id}/evaluar` | `Scoring.Evaluacion.Ejecutar` |
+
+La validación del JWT requiere que `Jwt:Issuer`, `Jwt:Audience` y
+`Jwt:SigningKey` coincidan exactamente con los configurados en
+`MotorScoring.Identity`, ya que ambos servicios firman/validan con la
+misma clave simétrica sin comunicarse entre sí en tiempo de ejecución.
+
+```json
+{
+  "Jwt": {
+    "Issuer": "MotorScoring.Identity",
+    "Audience": "MotorScoring.Api",
+    "SigningKey": "clave-de-al-menos-32-bytes-igual-a-la-de-Identity"
+  }
+}
+```
+
+`GET /health` no requiere autenticación.
+
+------------------------------------------------------------------------
+
 ## Endpoints
 
 Los endpoints mantienen versionado mediante `/api/v1`.

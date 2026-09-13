@@ -236,6 +236,10 @@ Scoring.Evaluacion.Ejecutar
 ```
 
 Estos permisos están almacenados como claims asociados a los roles.
+Actualmente el seed de Identity asigna **ambos permisos a ambos roles**
+(`Administrador` y `Analista`); la diferencia entre ellos hoy solo se
+refleja en que la administración de usuarios (`/api/users`) exige
+explícitamente el rol `Administrador`.
 
 La autenticación y la autorización son procesos diferentes. Un usuario
 puede autenticarse correctamente mediante Google o GitHub y aun así
@@ -708,9 +712,23 @@ Scoring.Solicitud.Crear
 Scoring.Evaluacion.Ejecutar
 ```
 
+### Opción API
+
+`MotorScoring.Identity` expone un endpoint administrativo para esto,
+protegido con `[Authorize(Roles = "Administrador")]`:
+
+```http
+PUT /api/users/{id}/roles/Analista
+Authorization: Bearer <JWT de un usuario Administrador>
+```
+
+Requiere conocer el `Id` (GUID) del usuario, obtenible mediante
+`GET /api/users`.
+
 ### Opción SQL
 
-Reemplazar el correo por el usuario que se desea autorizar:
+Alternativa directa sobre la base de datos. Reemplazar el correo por
+el usuario que se desea autorizar:
 
 ``` sql
 USE MotorScoringIdentity;
